@@ -1,0 +1,11 @@
+pyspark
+jupyterlab
+deltalake
+pandas
+requests
+sidrapy
+pysus
+jupyter
+ipython
+matplotlib
+seaborn
