@@ -1,11 +1,3 @@
-<img src="https://r2cdn.perplexity.ai/pplx-full-logo-primary-dark%402x.png" style="height:64px;margin-right:32px"/>
-
-# gostaria que voce me fornecesse as documentacoes das apis/lib para eu saber quais informações eu consigo pegar
-
-Perfeito! Vou compilar para você um **guia completo de documentação** das principais APIs e bibliotecas para dados brasileiros sobre mulheres, desigualdade e vulnerabilidade social:
-
-***
-
 # 📚 **Documentação Completa - APIs e Bibliotecas para Dados Brasileiros**
 
 ## **1. SIDRA API (IBGE) - Sistema IBGE de Recuperação Automática**
