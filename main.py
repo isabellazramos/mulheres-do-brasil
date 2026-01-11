@@ -3,85 +3,88 @@
 import os
 import logging
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, sum, avg, count, when
-from pyspark.sql.types import StructType, StructField, StringType, LongType
+from pyspark.sql.functions import col
+import pandas as pd
+import sys
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+from src.extract import (
+    get_population_sidrapy,
+    clean_dataframe
+)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(name)s %(levelname)s %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 def main():
-    logger.info("===== INICIANDO ETL =====")
+    logger.info("="*70)
+    logger.info("ETL COM SIDRAPY - DADOS REAIS DO IBGE")
+    logger.info("="*70)
     
     os.makedirs("data/processed", exist_ok=True)
     os.makedirs("data/output", exist_ok=True)
+    os.makedirs("data/raw", exist_ok=True)
     
     spark = SparkSession.builder \
-        .appName("ETL-Mulheres") \
+        .appName("ETL-Sidrapy") \
         .config("spark.sql.adaptive.enabled", "true") \
         .config("spark.driver.memory", "4g") \
         .getOrCreate()
     
     try:
-        # 1. EXTRACAO
-        logger.info("PASSO 1: EXTRACAO")
+        # 1. EXTRACAO - SIDRAPY
+        logger.info("\nPASSO 1: EXTRAÇÃO COM SIDRAPY")
+        logger.info("-"*70)
         
-        dados = [
-            ("SP", 22000000, 18, 78),
-            ("MG", 10500000, 17, 77),
-            ("RJ", 8500000, 19, 76),
-            ("BA", 7500000, 20, 75),
-            ("RS", 6500000, 16, 79),
-            ("PR", 6200000, 17, 78),
-            ("PE", 4800000, 21, 74),
-            ("CE", 4200000, 22, 73)
-        ]
+        df_pop = get_population_sidrapy()
         
-        schema = StructType([
-            StructField("estado", StringType()),
-            StructField("mulheres", LongType()),
-            StructField("fecundidade", LongType()),
-            StructField("vida", LongType())
-        ])
+        if df_pop is None or len(df_pop) == 0:
+            logger.error("\nFALHA: sidrapy não conseguiu extrair dados")
+            sys.exit(1)
         
-        df = spark.createDataFrame(dados, schema)
-        logger.info(f"Extraidos: {df.count()} registros")
-        df.show()
+        df_pop = clean_dataframe(df_pop)
         
-        # 2. TRANSFORMACAO
-        logger.info("PASSO 2: TRANSFORMACAO")
+        logger.info(f"\n{len(df_pop)} registros REAIS do IBGE")
+        logger.info(f"Colunas: {df_pop.columns.tolist()}")
+        logger.info(f"\n{df_pop.head()}")
         
-        df_clean = df.filter(col("mulheres") > 0)
+        # Salvar raw
+        df_pop.to_csv("data/raw/ibge_sidrapy.csv", index=False)
+        logger.info(f"Salvo: data/raw/ibge_sidrapy.csv")
         
-        df_regiao = df_clean.withColumn("regiao",
-            when(col("estado").isin("SP", "MG", "RJ"), "Sudeste")
-            .when(col("estado").isin("RS", "PR"), "Sul")
-            .when(col("estado").isin("BA", "PE", "CE"), "Nordeste")
-            .otherwise("Outros")
-        )
+        # 2. TRANSFORMAÇÃO COM SPARK
+        logger.info("\nPASSO 2: TRANSFORMAÇÃO COM SPARK")
+        logger.info("-"*70)
         
-        df_final = df_regiao.groupBy("regiao").agg(
-            sum("mulheres").alias("total"),
-            avg("fecundidade").alias("fecund"),
-            avg("vida").alias("vida_med"),
-            count("*").alias("estados")
-        ).orderBy("regiao")
+        df_spark = spark.createDataFrame(df_pop)
+        logger.info(f"DataFrame: {df_spark.count()} linhas")
         
-        df_final.show()
+        df_spark.show(5)
         
         # 3. CARREGAMENTO
-        logger.info("PASSO 3: CARREGAMENTO")
+        logger.info("\nPASSO 3: CARREGAMENTO")
+        logger.info("-"*70)
         
-        df_final.write.mode("overwrite").parquet("data/processed/mulheres.parquet")
-        logger.info("Salvo: data/processed/mulheres.parquet")
+        # Parquet
+        df_spark.write.mode("overwrite").parquet("data/processed/ibge.parquet")
+        logger.info("Salvo: data/processed/ibge.parquet")
         
-        df_final.coalesce(1).write.mode("overwrite").option("header", "true").csv("data/output/mulheres.csv")
-        logger.info("Salvo: data/output/mulheres.csv")
+        # CSV
+        df_spark.coalesce(1).write \
+            .mode("overwrite") \
+            .option("header", "true") \
+            .csv("data/output/ibge.csv")
+        logger.info("Salvo: data/output/ibge.csv")
         
-        logger.info("===== SUCESSO! =====")
+        logger.info("\n" + "="*70)
+        logger.info("Dados reais do IBGE processados")
+        logger.info("="*70)
         
     except Exception as e:
-        logger.error(f"ERRO: {e}")
-        raise
+        logger.error(f"\nERRO: {e}", exc_info=True)
+        sys.exit(1)
     finally:
         spark.stop()
 
