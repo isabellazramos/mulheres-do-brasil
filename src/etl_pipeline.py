@@ -16,34 +16,61 @@ class ETLPipeline:
             os.makedirs(p, exist_ok=True)
 
     def extract_all(self):
-        logger.info("\nPASSO 1: EXTRAÇÃO COM SIDRAPY")
+        logger.info("\nPASSO 1: EXTRAÇÃO COM SIDRAPY E DATASUS")
         logger.info("-" * 70)
         
-        # Mapeamento direto com os nomes do Extractor
         return {
             'pop': self.extrator.clean_dataframe(self.extrator.get_population_sidrapy()),
+            'pop_race': self.extrator.clean_dataframe(self.extrator.get_population_by_race_gender()),
             'fec': self.extrator.clean_dataframe(self.extrator.get_fecundity_rate()),
-            'life': self.extrator.clean_dataframe(self.extrator.get_life_expectancy()),
-            'edu': self.extrator.clean_dataframe(self.extrator.get_education_illiteracy())
+            'life': self.extrator.clean_dataframe(self.extrator.get_life_expectancy()),  # Apenas sexo
+            'edu': self.extrator.clean_dataframe(self.extrator.get_education_illiteracy()),
         }
 
     def save_raw(self, dfs: dict):
-        """Salva CSVs brutos separando por sexo quando disponível"""
+        """Salva CSVs brutos separando por sexo e cor/raça quando disponível"""
         logger.info("\nPASSO 1B: SALVANDO DADOS BRUTOS")
+        
         for key, df in dfs.items():
-            if df is not None:
-                # Se houver coluna Sexo, separa os arquivos
-                if 'Sexo' in df.columns:
-                    for genero in ['Mulheres', 'Homens']:
-                        temp_df = df[df['Sexo'] == genero]
+            if df is None or df.empty:
+                logger.warning(f"⚠ Pulando {key}: DataFrame vazio")
+                continue
+                
+            # Verifica quais colunas de classificação existem
+            has_sexo = 'Sexo' in df.columns
+            has_cor_raca = 'Cor ou raça' in df.columns
+            
+            if has_sexo and has_cor_raca:
+                # Separa por sexo e cor/raça
+                sexos = df['Sexo'].unique()
+                racas = df['Cor ou raça'].unique()
+                
+                logger.info(f"  {key}: {len(sexos)} sexos × {len(racas)} raças/cores")
+                
+                for genero in sexos:
+                    for raca in racas:
+                        temp_df = df[(df['Sexo'] == genero) & (df['Cor ou raça'] == raca)]
                         if not temp_df.empty:
-                            path = f"data/raw/{key}_{genero.lower()}.csv"
+                            genero_clean = genero.lower().replace(' ', '_')
+                            raca_clean = raca.lower().replace(' ', '_').replace('ú', 'u')
+                            path = f"data/raw/{key}_{genero_clean}_{raca_clean}.csv"
                             temp_df.to_csv(path, index=False, encoding='utf-8-sig')
-                            logger.info(f"Salvo: {path}")
-                else:
-                    path = f"data/raw/{key}_geral.csv"
-                    df.to_csv(path, index=False, encoding='utf-8-sig')
-                    logger.info(f"Salvo: {path}")
+                            logger.info(f"  ✓ {path} ({len(temp_df)} registros)")
+                            
+            elif has_sexo:
+                # Apenas por sexo
+                for genero in df['Sexo'].unique():
+                    temp_df = df[df['Sexo'] == genero]
+                    if not temp_df.empty:
+                        genero_clean = genero.lower().replace(' ', '_')
+                        path = f"data/raw/{key}_{genero_clean}.csv"
+                        temp_df.to_csv(path, index=False, encoding='utf-8-sig')
+                        logger.info(f"  ✓ {path} ({len(temp_df)} registros)")
+            else:
+                # Sem classificações
+                path = f"data/raw/{key}_geral.csv"
+                df.to_csv(path, index=False, encoding='utf-8-sig')
+                logger.info(f"  ✓ {path} ({len(df)} registros)")
 
     def start_spark(self):
         if self.spark is None:
@@ -85,15 +112,25 @@ class ETLPipeline:
         logger.info("\nPASSO 3: CARREGAMENTO FINAL")
         
         for key, sdf in spark_dfs.items():
-            if sdf is not None:
-                base_path = f"data/processed/{key}.parquet"
-                # Agora checamos por 'sexo' em minúsculo
-                if "sexo" in sdf.columns:
-                    sdf.write.mode("overwrite").partitionBy("sexo").parquet(base_path)
-                    logger.info(f"Parquet particionado por sexo: {base_path}")
-                else:
-                    sdf.write.mode("overwrite").parquet(base_path)
-                    logger.info(f"Parquet processado: {base_path}")
+            if sdf is None:
+                continue
+                
+            base_path = f"data/processed/{key}.parquet"
+            
+            # Identifica colunas de partição disponíveis
+            partition_cols = []
+            if "sexo" in sdf.columns:
+                partition_cols.append("sexo")
+            if "cor_ou_raça" in sdf.columns:
+                partition_cols.append("cor_ou_raça")
+            
+            # Escreve particionado ou não
+            if partition_cols:
+                sdf.write.mode("overwrite").partitionBy(*partition_cols).parquet(base_path)
+                logger.info(f"  ✓ Parquet particionado por {', '.join(partition_cols)}: {base_path}")
+            else:
+                sdf.write.mode("overwrite").parquet(base_path)
+                logger.info(f"  ✓ Parquet processado: {base_path}")
 
     def stop_spark(self):
         if self.spark:
