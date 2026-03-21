@@ -259,56 +259,6 @@ pip install matplotlib seaborn jupyter
 
 ***
 
-## **🎯 Próximos Passos:**
-
-Com essas documentações, você pode:
-
-1. ✅ Explorar **tabelas disponíveis** no SIDRA
-2. ✅ Baixar dados de **violência** via PySUS/SINAN
-3. ✅ Acessar **indicadores sociais** compilados
-4. ✅ Construir **datasets customizados** para seu projeto Spark
-
-Quer que eu te ajude a explorar alguma dessas fontes especificamente ou começar a integrar com Spark? 🚀
-<span style="display:none">[^10][^11][^12][^13][^14][^15][^16][^17][^18][^19][^20][^9]</span>
-
-<div align="center">⁂</div>
-
-[^1]: https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/9481-novo-sidra-permite-consultar-facilmente-dados-de-estudos-e-pesquisas-do-ibge-tambem-em-dispositivos-moveis
-
-[^2]: https://sidrapy.readthedocs.io
-
-[^3]: https://pypi.org/project/sidrapy/
-
-[^4]: https://pysus.readthedocs.io/pt/latest/tutorials/Preprocessing SINAN.html
-
-[^5]: https://pysus.readthedocs.io/en/stable/tutorials/Dengue.html
-
-[^6]: https://pysus.readthedocs.io/pt/stable/databases/SINAN.html
-
-[^7]: https://pypi.org/project/DadosAbertosBrasil/
-
-[^8]: https://github.com/GusFurtado/DadosAbertosBrasil
-
-[^9]: http://pdf.blucher.com.br/marineengineeringproceedings/spolm2019/014.pdf
-
-[^10]: http://www.scielo.br/pdf/bcg/v23n1/1982-2170-bcg-23-01-00150.pdf
-
-[^11]: https://periodicos.ufpe.br/revistas/revistageografia/article/download/251781/40848
-
-[^12]: http://www.scielo.br/pdf/rae/v34n2/a06v34n2.pdf
-
-[^13]: https://www.scielo.br/j/rbmet/a/d6smph7RGwzv4d6XDnnh4kd/?format=pdf\&lang=pt
-
-[^14]: http://www.scielo.br/pdf/bcg/v22n3/1982-2170-bcg-22-03-00389.pdf
-
-[^15]: https://www.scielo.br/j/ci/a/Mbjn8vKDsBhS4MXC9LRpg7S/?format=pdf\&lang=pt
-
-[^16]: https://www.scielo.br/j/ci/a/CK3c7G386LTxLwrHbGH4RYM/?format=pdf\&lang=pt
-
-[^17]: https://pt.linkedin.com/pulse/download-de-dados-do-api-sidra-ibge-linguagem-python-martins-rq2of
-
-[^18]: https://analisemacro.com.br/economia/indicadores/coletando-dados-do-sidra-com-o-python/
-
 [^19]: https://sidrapy.readthedocs.io/pt-br/latest/modules/table.html
 
 [^20]: https://lemate.paginas.ufsc.br/files/2020/08/Manual-SIDRA-versão-agosto-2020.pdf
